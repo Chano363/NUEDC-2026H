@@ -1,0 +1,44 @@
+.gitignore
+# 编译产物
+*.o
+*.d
+*.axf
+*.hex
+*.bin
+*.elf
+*.map
+*.lst
+Debug/
+Listings/
+x64/
+build/
+out/
+__pycache__/
+*.pyc
+# IDE / AI 工具配置
+.vs/
+.vscode/
+.idea/
+.codex/
+.theia/
+.metadata/
+.trae/
+.codebuddy/
+.cnb/
+.learnings/
+*.uvguix.*
+*.user
+*.sln
+*.vcxproj*
+# 大文件 / 数据
+*.zip
+*.png
+*.jpg
+*.pdf
+models/
+data/
+outputs/
+logs/
+# 系统
+.DS_Store
+Thumbs.db
