@@ -1,0 +1,65 @@
+/* 循迹测试备份 — 需要时复制内容到 empty.c */
+#include <stdio.h>
+#include "ti_msp_dl_config.h"
+#include "Bsp/bluetooth.h"
+#include "Bsp/grayscale.h"
+#include "Bsp/motor_drv.h"
+#include "App/tracking.h"
+#include "App/speed_ctrl.h"
+
+int main(void)
+{
+    /* BSL 防护 */
+    DL_GPIO_initDigitalOutput(IOMUX_PINCM40);
+    DL_GPIO_clearPins(GPIOA, DL_GPIO_PIN_18);
+    DL_GPIO_enableOutput(GPIOA, DL_GPIO_PIN_18);
+
+    SYSCFG_DL_init();
+
+    Grayscale_Init();
+    Tracking_Init();
+    MotorDrv_Init();
+    Bluetooth_Init();
+    SpeedCtrl_Init();
+
+    MotorDrv_Stop();
+    Bluetooth_SendString("=== Tracking Test ===\r\n");
+
+    uint32_t last_ctrl   = 0;
+    uint32_t last_report = 0;
+
+    while (1) {
+        uint32_t now = HAL_GetTick();
+
+        /* 50Hz 控制更新 */
+        if (now - last_ctrl >= 20) {
+            last_ctrl = now;
+            Tracking_Update();
+            SpeedCtrl_UpdatePositionOnly();
+        }
+
+        /* 500ms 蓝牙状态报告 */
+        if (now - last_report >= 500) {
+            last_report = now;
+
+            SpeedCtrl_DataDef data = SpeedCtrl_GetStatus();
+            uint8_t digital = Tracking_GetDigitalStatus();
+            uint8_t line    = Tracking_GetLineStatus();
+            int16_t dev     = Tracking_GetDeviation();
+
+            char vis[9];
+            for (int i = 0; i < 8; i++)
+                vis[i] = (digital & (1 << i)) ? '#' : '.';
+            vis[8] = '\0';
+
+            char buf[80];
+            int n = snprintf(buf, sizeof(buf),
+                "[%s] dev=%d line=%s L=%ld R=%ld\r\n",
+                vis, (int)dev,
+                (line == TRACKING_LINE_ON)    ? "ON" :
+                (line == TRACKING_LINE_SEARCH) ? "SEARCH" : "LOST",
+                data.left_speed_target, data.right_speed_target);
+            Bluetooth_SendData((const uint8_t *)buf, (uint16_t)n);
+        }
+    }
+}
